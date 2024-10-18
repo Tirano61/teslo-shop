@@ -1,5 +1,5 @@
 import { text } from "stream/consumers";
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { BeforeInsert, Column, Entity, PrimaryGeneratedColumn } from "typeorm";
 
 @Entity()
 export class Product {
@@ -12,7 +12,7 @@ export class Product {
     })
     title: string;
 
-    @Column('numeric',{
+    @Column('float',{
         default: 0
     })
     price: number;
@@ -43,4 +43,12 @@ export class Product {
 
     @Column( 'text')
     gender: string;
+
+    @BeforeInsert()
+    checkSlugInsert(){
+        if( !this.slug){
+            this.slug = this.title;
+        }
+        this.slug = this.slug.toLowerCase().replaceAll(' ', '_').replaceAll("'", '');
+    }    
 }
