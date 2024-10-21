@@ -1,7 +1,7 @@
 import { BadRequestException, Injectable, InternalServerErrorException, Logger, NotFoundException } from '@nestjs/common';
 import { CreateProductDto } from './dto/create-product.dto';
 import { UpdateProductDto } from './dto/update-product.dto';
-import { Repository } from 'typeorm';
+import { DataSource, Repository } from 'typeorm';
 import { Product } from './entities/product.entity';
 import { InjectRepository } from '@nestjs/typeorm';
 import { PaginationDto } from '../common/dtos/pagination.dto';
@@ -20,6 +20,8 @@ export class ProductsService {
 
     @InjectRepository(ProductImage)
     private readonly productImageRepository: Repository<ProductImage>,
+
+    private readonly datatSourse: DataSource,
   ){}
 
   async create(createProductDto: CreateProductDto) {
@@ -84,18 +86,39 @@ export class ProductsService {
   }
 
   async update(id: string, updateProductDto: UpdateProductDto) {
+
+    const { images, ...toUpdate } = updateProductDto;
+
     const product = await this.productRepository.preload({
       id: id,
-      ...updateProductDto,
-      images: []
+      ...toUpdate,
     });
 
     if( !product ) throw new NotFoundException(`Product with id ${ id } not found`)
-    
+
+    //! Create query runner
+    const queryRunner = this.datatSourse.createQueryRunner();
+    await queryRunner.connect();
+    await queryRunner.startTransaction();
+
     try {
-      await this.productRepository.save( product );
-      return product;
+      if( images ){
+        await queryRunner.manager.delete( ProductImage, { product: {id} });
+        product.images = images.map( 
+          image => this.productImageRepository.create({ url: image})
+        );
+      }else{
+
+      }
+      await queryRunner.manager.save( product );
+
+      await queryRunner.commitTransaction();
+      await queryRunner.release();
+      //await this.productRepository.save( product );
+      return this.findOnePlain( id );
     } catch (error) {
+      await queryRunner.rollbackTransaction();
+      await queryRunner.release();
       this.handlerDBException(error);
     }
 
