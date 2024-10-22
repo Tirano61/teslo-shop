@@ -137,4 +137,15 @@ export class ProductsService {
     this.logger.error(error);
     throw new InternalServerErrorException('Unexpected error, check server logs');
   }
+
+  //! Eliminar todos los registros para generar las seed en dev
+  async deleteAllProducts(){
+    const query = this.productRepository.createQueryBuilder('product');
+
+    try {
+      return await query.delete().where({}).execute();
+    } catch (error) {
+      this.handlerDBException( error );
+    }
+  } 
 }
