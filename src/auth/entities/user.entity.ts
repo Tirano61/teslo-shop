@@ -18,11 +18,11 @@ export class User {
     @Column('text',{nullable: false})
     fullName: string;
 
-    @Column('bool', {nullable:false})
+    @Column('bool', {default: true})
     isActive: boolean;
 
     @Column('text',{
-        nullable:false, 
+        //nullable:false, 
         array: true,
         default: ['user']
     })
