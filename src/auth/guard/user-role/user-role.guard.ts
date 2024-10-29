@@ -1,6 +1,7 @@
-import { CanActivate, ExecutionContext, Injectable } from '@nestjs/common';
+import { BadGatewayException, CanActivate, ExecutionContext, ForbiddenException, Injectable } from '@nestjs/common';
 import { Reflector } from '@nestjs/core';
 import { Observable } from 'rxjs';
+import { META_ROLES } from 'src/auth/decorators/role-protected/role-protected.decorator';
 
 @Injectable()
 export class  UserRoleGuard implements CanActivate {
@@ -13,9 +14,23 @@ export class  UserRoleGuard implements CanActivate {
     context: ExecutionContext,
   ): boolean | Promise<boolean> | Observable<boolean> {
 
-    const validRoles: string[] = this.reflector.get('roles',  context.getHandler());
+    const validRoles: string[] = this.reflector.get( META_ROLES ,  context.getHandler());
+    //! Esto es para que todos los roles pasen
+    if( !validRoles ) return true;
+    if( validRoles.length === 0 ) return true;  
+    //! --------------------------------------
+    const req = context.switchToHttp().getRequest();
+    const user = req.user;
+    if( !user )
+      throw new BadGatewayException('User not found');
 
-    console.log(validRoles);
-    return true;
+    for( const role of user.roles ){
+      if( validRoles.includes( role ) ){
+        return true;
+      }
+    }
+
+    throw new ForbiddenException(`User  ${user.fullName} need a valid role: [${ validRoles }]`);
+
   }
 }
