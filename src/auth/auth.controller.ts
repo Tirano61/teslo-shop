@@ -8,6 +8,8 @@ import { User } from './entities/user.entity';
 import { RawHeaaders } from './decorators/raw-headers.decorator';
 import { IncomingHttpHeaders } from 'http';
 import { UserRoleGuard } from './guard/user-role/user-role.guard';
+import { RoleProtected } from './decorators/role-protected/role-protected.decorator';
+import { ValidRoles } from './interfaces/valid-roles';
 
 
 @Controller('auth')
@@ -48,7 +50,8 @@ export class AuthController {
 
   //! Hacer un decorador para validar los roles (Practica)
   @Get('private2')
-  @SetMetadata('roles', [ 'admin', 'super-user'])
+  @RoleProtected( ValidRoles.admin, ValidRoles.superUser, ValidRoles.user )
+ //@SetMetadata('roles', [ 'admin', 'super-user'])
   @UseGuards( AuthGuard(), UserRoleGuard )
   privateRout2(
     @GetUser() user: User,
