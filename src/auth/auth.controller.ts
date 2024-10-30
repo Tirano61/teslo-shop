@@ -10,6 +10,8 @@ import { IncomingHttpHeaders } from 'http';
 import { UserRoleGuard } from './guard/user-role/user-role.guard';
 import { RoleProtected } from './decorators/role-protected/role-protected.decorator';
 import { ValidRoles } from './interfaces/valid-roles';
+import { Auth } from './decorators/auth.decorator';
+import { IsNumber } from 'class-validator';
 
 
 @Controller('auth')
@@ -54,6 +56,19 @@ export class AuthController {
  //@SetMetadata('roles', [ 'admin', 'super-user'])
   @UseGuards( AuthGuard(), UserRoleGuard )
   privateRout2(
+    @GetUser() user: User,
+  ){
+    return {
+      ok: true,
+      user,
+    }
+  }
+
+  @Get('private3')
+   //! Aca se le pasa el rol del usuario que queremos que admita el endpoint
+   //! Si queda vacio admitiria cualquier role, solo tiene que tener token y un usuario valido
+  @Auth( ValidRoles.admin )
+  privet3(
     @GetUser() user: User,
   ){
     return {
