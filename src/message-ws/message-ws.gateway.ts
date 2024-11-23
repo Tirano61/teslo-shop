@@ -1,8 +1,10 @@
 import { OnGatewayConnection, OnGatewayDisconnect, SubscribeMessage, WebSocketGateway, WebSocketServer } from '@nestjs/websockets';
 import { MessageWsService } from './message-ws.service';
 import { Server, Socket } from 'socket.io';
-import { PartialType } from '@nestjs/swagger';
 import { NewMessageDTo } from './dtos/new-mwssage.dto';
+import { JwtService } from '@nestjs/jwt';
+import { JwtPayload } from 'src/auth/interfaces/jwt-payload.interface';
+
 
 @WebSocketGateway({ cors: true })
 export class MessageWsGateway implements OnGatewayConnection, OnGatewayDisconnect {
@@ -10,13 +12,24 @@ export class MessageWsGateway implements OnGatewayConnection, OnGatewayDisconnec
   @WebSocketServer() wss: Server
 
   constructor(
-    private readonly messageWsService: MessageWsService
+    private readonly messageWsService: MessageWsService,
+    private readonly jwtServices: JwtService,
   ) {}
 
-  handleConnection(client: Socket) {
-    const token = client.handshake.headers.authentication;
-    console.log({token});
-    this.messageWsService.registerClient( client );
+  async handleConnection(client: Socket) {
+    const token = client.handshake.headers.authentication as string;
+    let payload: JwtPayload;
+    try {
+      payload = this.jwtServices.verify(token);
+      
+      await this.messageWsService.registerClient(client, payload.id);
+
+    } catch (error) {
+      client.disconnect();
+      return;
+    }
+    //console.log({payload});
+  
     this.wss.emit('clients-updated', this.messageWsService.getConnectedClients())
     //console.log({ conectados: this.messageWsService.getConnectedClients()});
   }
@@ -42,11 +55,13 @@ export class MessageWsGateway implements OnGatewayConnection, OnGatewayDisconnec
     // });
     //! Emitir a todos incluso el cliente que manda
     this.wss.emit('message-from-server', {
-        fullName: 'Soy yo',
+        fullName: this.messageWsService.getUserFullNameBySocketId(client.id),
         message: payload.message || 'no-message'
     });
 
   }
+
+
   
   
 
